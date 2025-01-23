@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    networks:
+      - keycloak-wordpress-network
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    command:
+      - start-dev
+    ports:
+      - "8080:8080"
+    hostname: keycloack
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+
+  wordpress:
+    image: wordpress:latest
+    container_name: wordpress
+    networks:
+      - keycloak-wordpress-network
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: rootpassword
+      WORDPRESS_DB_NAME: wordpress
+      OPENID_CONNECT_PROVIDER_URL: http://localhost:8080/realms/my-realm
+      OPENID_CONNECT_CLIENT_ID: wordpress-client
+      OPENID_CONNECT_CLIENT_SECRET: OzVgpDSLgWa1iFksxtabsFtofL2QzKdL
+      OPENID_CONNECT_REDIRECT_URI: http://localhost:81/wp-admin/admin-ajax.php?action=openid-connect-authorize
+      OPENID_CONNECT_SCOPES: openid profile email
+    ports:
+      - "81:80"
+    hostname: wordpress
+    volumes:
+      - wordpress-data:/var/www/html
+    depends_on:
+      - db
+
+  db:
+    image: mysql:5.7
+    container_name: db
+    networks:
+      - keycloak-wordpress-network
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: wordpress
+    volumes:
+      - db-data:/var/lib/mysql
+
+networks:
+  keycloak-wordpress-network:
+    driver: bridge
+
+volumes:
+  keycloak-data:
+  wordpress-data:
+  db-data:
+
